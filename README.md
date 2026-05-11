@@ -6,6 +6,10 @@ O projeto cria uma impressora virtual no Windows que qualquer aplicativo pode us
 
 ---
 
+![Impressora Epson FX-80 Emulator registrada no spooler do Windows](images/epson-01.png)
+
+---
+
 ## Objetivo
 
 Emular 100% o comportamento de uma impressora matricial Epson FX-80, incluindo:
@@ -187,6 +191,8 @@ Acessiveis pelo icone na bandeja do sistema > Abrir gerenciador > Configuracoes:
 | Pasta de saida | Qualquer diretorio local |
 
 As configuracoes sao salvas no registro do Windows e aplicadas a partir do proximo job.
+
+![Gerenciador de impressao -- aba Configuracoes](images/form-01.png)
 
 ---
 

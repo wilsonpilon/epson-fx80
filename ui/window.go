@@ -21,7 +21,7 @@ const maxJobs = 200
 
 // newMainWindow cria e configura a janela principal.
 func newMainWindow(a fyne.App) fyne.Window {
-	w := a.NewWindow("Epson FX-80 Emulator - Gerenciador de Impressao")
+	w := a.NewWindow(WindowTitle())
 	w.Resize(fyne.NewSize(820, 520))
 	w.SetCloseIntercept(func() {
 		// Fechar a janela apenas a esconde, nao encerra o app
@@ -318,6 +318,11 @@ func buildSettingsTab(w fyne.Window, a fyne.App) fyne.CanvasObject {
 
 func buildAboutTab() fyne.CanvasObject {
 	title := widget.NewRichTextFromMarkdown("# Epson FX-80 Emulator")
+	versionLabel := widget.NewLabelWithStyle(
+		FullVersion(),
+		fyne.TextAlignLeading,
+		fyne.TextStyle{Bold: true, Monospace: true},
+	)
 	desc := widget.NewRichTextFromMarkdown(`
 Impressora virtual para Windows que emula uma Epson FX-80.
 
@@ -326,14 +331,14 @@ Recebe jobs de impressao de qualquer aplicativo Windows e gera arquivos PDF auto
 **Componentes:**
 - **Impressora virtual**: aparece em "Impressoras e Scanners" do Windows
 - **Port Monitor**: servico que intercepta os dados de impressao
-- **PDF Generator**: converte o texto em PDF com fonte Arial
+- **PDF Generator**: converte o texto em PDF com fonte Courier monoespaco
 - **Gerenciador**: esta janela
 
 **Pasta de PDFs:** os arquivos sao salvos em Documentos\EpsonFX80
 
-**Versao:** 1.0.0
+**Licenca:** GNU General Public License v3.0
 `)
-	return container.NewPadded(container.NewVBox(title, desc))
+	return container.NewPadded(container.NewVBox(title, versionLabel, desc))
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
