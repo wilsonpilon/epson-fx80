@@ -36,3 +36,12 @@
 2026/05/11 11:10:26 log.go:12: Fyne error:  Failed to set dark mode
 2026/05/11 11:10:26 log.go:14:   Cause: Too many posts were made to a semaphore.
 2026/05/11 11:10:26 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/window_windows.go:27
+2026/05/11 14:16:23 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 14:16:47 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 14:17:06 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 14:28:13 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 14:28:46 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 14:39:41 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 14:39:41 log.go:12: Fyne error:  Failed to set dark mode
+2026/05/11 14:39:41 log.go:14:   Cause: Too many posts were made to a semaphore.
+2026/05/11 14:39:41 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/window_windows.go:27

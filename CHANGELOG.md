@@ -7,6 +7,53 @@ Versionamento seguindo [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [0.1.5] - 2026-05-11
+
+### Adicionado
+- Pacote `fontmgr`: gerenciamento completo de fontes TTF por modo de impressao
+  - 12 modos suportados: Regular, Bold, Italic, Condensed, Expanded e todas as combinacoes
+  - Escaneamento de subpastas em `installer\fonts\ttf\` (regular, bold, italic, etc.)
+  - Mapeamento modo->arquivo salvo em `HKLM\SOFTWARE\EpsonFX80Emulator\Fonts`
+- Selecao de fonte TTF por modo na aba Configuracoes da UI
+  - Um `Select` por modo listando os `.ttf` disponiveis na subpasta correspondente
+  - Fallback automatico para Courier quando nenhum TTF estiver configurado
+- `pdfgen/testpage.go`: gerador dedicado da pagina de teste com controle direto de fonte
+  - Cada modo registrado com familia unica no fpdf (`TTF_Regular`, `TTF_Bold`, etc.)
+  - Garante distincao visual real entre os modos no PDF gerado
+- Pagina de teste acessivel pela toolbar da aba Historico ("Pagina de teste")
+  - Regua de 80 colunas com digitos superior/inferior e marcadores a cada 5/10 col
+  - Caracteres ASCII imprimiveis (32-126)
+  - Bloco por modo: cabecalho identificador + frase de teste + digitos/simbolos
+  - Dialogo pos-geracao perguntando se deseja abrir o PDF imediatamente
+- Versao e build stamp visiveis no rodape da janela principal (todas as abas)
+  - Formato: `Epson FX-80 Emulator  0.1.5 - 0x6A01DF28`
+  - Build stamp = Unix timestamp em hexadecimal, injetado via `-ldflags`
+- `ui/version.go`: variaveis `Version` e `BuildStamp` injetaveis via ldflags
+  - `FullVersion()` retorna `"0.1.5 - build 0x6A01DF28"`
+  - `WindowTitle()` retorna o titulo completo para a janela
+- `REFERENCE.md`: referencia rapida de todos os comandos operacionais
+
+### Alterado
+- `portmonitor/main.go`: pre-carga das fontes TTF ao iniciar o servico via `preloadFonts()`
+  - Variavel global `fontManager` disponivel para todos os jobs
+  - Log detalhado de cada fonte carregada por modo
+- `portmonitor/processor.go`: injeta `fontManager.Map` nas opcoes do pdfgen
+- `pdfgen/pdfgen.go`: campo `VersionLine` adicionado a `Options`; `registerFonts()` melhorado
+- `build.ps1`: calcula e injeta `Version` e `BuildStamp` no `ui.exe` via ldflags
+  - `$BuildHex = "0x{0:X}" -f [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()`
+  - Corrigido escaping de ldflags: usa `& go build` e variavel `$UILDFlags` separada
+- `README.md`: estrutura do projeto atualizada com novos pacotes e arquivos
+- Versao global atualizada para 0.1.5
+
+### Corrigido
+- Fontes Bold/Italic/Condensed apareciam identicas a Regular na pagina de teste
+  (cada modo agora usa familia fpdf separada em vez de estilo da mesma familia)
+- Erro de escape `\t` e `\` em string Go na mensagem de pasta de fontes nao encontrada
+- Erro de ldflags: `invalid value... parameter may not start with quote character`
+  (corrigido com operador `&` e variavel intermediaria `$UILDFlags`)
+
+---
+
 ## [0.1.3] - 2026-05-11
 
 ### Adicionado
@@ -14,48 +61,30 @@ Versionamento seguindo [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   - Tipo de papel: Branco, Zebrado Verde, Zebrado Azul
   - Largura em colunas: 80 ou 132
   - Faixa de trator com furos laterais (espacamento real de 12.7mm)
-- Preview descritivo em tempo real na aba Configuracoes da UI
+- Preview descritivo em tempo real na aba Configuracoes
 - Icone da impressora matricial no system tray em formato PNG embutido
-  (corrige quadrado cinza que aparecia anteriormente com SVG)
-- Opcao `-CleanService` no `build.ps1` para parar servico, copiar binarios e reiniciar em um comando
-- Atalho do `ui.exe` criado automaticamente na inicializacao do Windows pelo `install.ps1`
-- Deteccao de reinstalacao no `install.ps1` com aviso ao usuario e confirmacao antes de prosseguir
-- `MANUAL.md` com instrucoes completas de compilacao, operacao, configuracao e referencia ESC/P
-- `README.md` com descricao do projeto, arquitetura, ambiente de desenvolvimento e roadmap
+- Opcao `-CleanService` no `build.ps1`
+- Atalho do `ui.exe` na inicializacao do Windows
+- Deteccao de reinstalacao no `install.ps1` com confirmacao
 
 ### Alterado
-- `pdfgen`: reescrito para suportar opcoes de papel; fonte trocada para Courier monoespaco
-  com tamanho calculado automaticamente para caber o numero de colunas no papel A4
-- `build.ps1`: separado em modo de compilacao e modo `-CleanService`; deploy automatico
-  para a pasta `installer\` inclui parada e reinicio do `ui.exe`
-- `install.ps1`: porta agora configurada diretamente como `\\.\pipe\epson_fx80_emulator`
-  (corrige problema em que o spooler nao redirecionava para o named pipe)
-- `config.go`: novos campos `PaperType`, `TractorFeed` e `Columns` adicionados ao `Config`
-- Aba Configuracoes da UI expandida com selecao de papel, colunas e trator
+- `pdfgen`: fonte trocada para Courier; tamanho calculado automaticamente por colunas
+- Porta configurada diretamente como `\\.\pipe\epson_fx80_emulator`
 
 ### Corrigido
-- Icone do system tray nao renderizava (Fyne no Windows nao suporta SVG como icone de bandeja)
-- `[OK]` falso na etapa de gravacao do registro quando `New-Item` falhava silenciosamente
-- Binarios bloqueados ao tentar copiar durante o `-CleanService` sem parar o `ui.exe` antes
-- Encoding dos scripts `.ps1` corrigido para ASCII puro (eliminados caracteres UTF-8
-  como travessoes e checkmarks que causavam erros de parse no PowerShell)
+- Icone cinza no system tray (SVG trocado por PNG base64)
+- `[OK]` falso na gravacao do registro
+- Encoding ASCII dos scripts .ps1
 
 ---
 
 ## [0.1.2] - 2026-05-11
 
 ### Adicionado
-- Interface grafica `ui.exe` com icone na bandeja do sistema (system tray)
-  - Aba Historico: lista jobs com data, nome, paginas, tamanho e botoes de acao
-  - Aba Configuracoes: pasta de saida, status do servico, botao reiniciar
-  - Aba Sobre: informacoes do projeto
-  - Auto-refresh da lista a cada 5 segundos
-- Menu da bandeja: Abrir gerenciador / Abrir pasta de PDFs / Encerrar
-- Fechar a janela apenas a esconde; app permanece na bandeja
-- `ui.exe` compilado com `-H windowsgui` para nao exibir janela de terminal
-
-### Alterado
-- `build.ps1` atualizado para compilar o terceiro binario `ui.exe`
+- Interface grafica `ui.exe` com system tray
+- Aba Historico: lista jobs com acoes de abrir e deletar
+- Aba Configuracoes: pasta de saida e status do servico
+- Auto-refresh da lista a cada 5 segundos
 
 ---
 
@@ -63,38 +92,26 @@ Versionamento seguindo [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Adicionado
 - Impressora virtual `Epson FX-80 Emulator` registrada no Windows
-- Driver baseado em `Generic / Text Only` (ja incluso no Windows, sem driver kernel)
-- Porta de impressao redirecionada para named pipe `\\.\pipe\epson_fx80_emulator`
-- Servico Windows `EpsonFX80Monitor` que escuta o named pipe via `go-winio`
-- Conversao de jobs de impressao em PDF com fonte Arial via `go-pdf/fpdf`
-- Limpeza de sequencias de escape ESC/P da Epson FX-80 antes da geracao do PDF
-- Banco SQLite para historico de jobs (data, nome, caminho, paginas, tamanho)
-- `install.ps1` para instalacao e desinstalacao da impressora no Windows
-- `build.ps1` para compilacao dos binarios `portmonitor.exe` e `installer.exe`
-- Modo `-debug` no `portmonitor.exe` para rodar no terminal sem instalar como servico
-- Log gravado em `portmonitor.log` ao lado do executavel
-- Configuracoes gravadas em `HKLM\SOFTWARE\EpsonFX80Emulator`
-
-### Estrutura inicial do projeto
-- `portmonitor/` -- servico Windows (main, service, monitor, processor)
-- `pdfgen/` -- gerador de PDF
-- `storage/` -- banco SQLite
-- `installer/` -- scripts e binario de instalacao
+- Driver `Generic / Text Only` com porta named pipe
+- Servico Windows `EpsonFX80Monitor`
+- Conversao de jobs em PDF com fonte Arial
+- Limpeza de sequencias ESC/P
+- Banco SQLite para historico de jobs
+- `install.ps1` e `build.ps1`
+- Modo `-debug` no portmonitor
 
 ---
 
 ## Versoes planejadas
 
-### [0.2.0] -- em planejamento
+### [0.2.0]
 - Interpretacao real de comandos ESC/P (negrito, italico, condensado, expandido)
 - Notificacao na bandeja ao receber novo job
 - Preview do PDF antes de salvar
 
-### [0.3.0] -- em planejamento
-- Graficos de pinos (bit image graphics ESC K / L / Y / Z)
+### [0.3.0]
+- Graficos de pinos (bit image ESC K/L/Y/Z)
 - Suporte a codepages internacionais (ESC R)
-- Emulacao de velocidade de impressao (som opcional)
 
-### [1.0.0] -- objetivo final
-- Emulacao 100% do conjunto de comandos ESC/P da Epson FX-80
-- Documentacao completa do protocolo ESC/P no MANUAL.md
+### [1.0.0]
+- Emulacao 100% do ESC/P da Epson FX-80

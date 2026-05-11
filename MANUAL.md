@@ -1,6 +1,6 @@
 # Epson FX-80 Emulator -- Manual de Operacao
 
-Versao 1.0 | Trabalho em curso
+Versao 0.1.5 | Trabalho em curso
 
 ---
 
@@ -13,8 +13,10 @@ Versao 1.0 | Trabalho em curso
 5. [Servico Windows (portmonitor)](#5-servico-windows-portmonitor)
 6. [Interface grafica (ui.exe)](#6-interface-grafica-uiexe)
 7. [Configuracoes de papel](#7-configuracoes-de-papel)
-8. [Diagnostico e logs](#8-diagnostico-e-logs)
-9. [Referencia de comandos ESC/P](#9-referencia-de-comandos-escp)
+8. [Configuracao de fontes TTF](#8-configuracao-de-fontes-ttf)
+9. [Pagina de teste](#9-pagina-de-teste)
+10. [Diagnostico e logs](#10-diagnostico-e-logs)
+11. [Referencia de comandos ESC/P](#11-referencia-de-comandos-escp)
 
 ---
 
@@ -32,18 +34,10 @@ Versao 1.0 | Trabalho em curso
 ### Verificando o ambiente
 
 ```powershell
-# Verifica versao do Go
-go version
-# Esperado: go version go1.22.x windows/amd64
-
-# Verifica GCC (necessario para go-sqlite3)
-gcc --version
-# Esperado: gcc (tdm64-1) 10.3.0 ou superior
-
-# Verifica politica de execucao do PowerShell
+go version        # go version go1.22.x windows/amd64
+gcc --version     # gcc (tdm64-1) 10.3.0 ou superior
 Get-ExecutionPolicy -Scope LocalMachine
-# Se retornar "Restricted", execute como Admin:
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine
+# Se "Restricted": Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
 ```
 
 ---
@@ -56,71 +50,57 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine
 C:\seu-projeto\
     go.mod
     build.ps1
-    README.md
-    MANUAL.md
     installer\
         install.ps1
-        main.go
+        fonts\ttf\          <- fontes TTF opcionais
+            regular\
+            bold\
+            italic\
+            condensed\
+            expanded\
+            bold-italic\
+            condensed-bold\
+            condensed-italic\
+            expanded-bold\
+            expanded-italic\
+            expanded-bold-italic\
+            condensed-bold-italic\
     portmonitor\
-        main.go  monitor.go  processor.go  service.go
     pdfgen\
-        pdfgen.go  options.go
     storage\
-        storage.go
+    fontmgr\
     ui\
-        main.go  window.go  config.go  icon.go
 ```
 
 ### Compilacao completa
 
 ```powershell
-# Na raiz do projeto (onde esta o go.mod)
-# Primeiro download das dependencias
-go mod tidy
-
-# Compila todos os binarios para dist\
-.\build.ps1
+go mod tidy        # baixa dependencias
+.\build.ps1        # compila para dist\ e mostra versao+build
 ```
 
-Apos a compilacao, a pasta `dist\` contera:
+O `build.ps1` calcula o build stamp automaticamente:
 
 ```
-dist\
-    portmonitor.exe   -- servico que intercepta os jobs de impressao
-    installer.exe     -- alternativa ao install.ps1
-    ui.exe            -- interface grafica na bandeja do sistema
+=== Build: Epson FX-80 Emulator ===
+Versao  : 0.1.5
+Build   : 0x6A01DF28  (1778507560)
 ```
 
-### Compilacao individual (opcional)
+### Compilacao individual
 
 ```powershell
-# Apenas o portmonitor
 go build -o dist\portmonitor.exe .\portmonitor\
-
-# Apenas a UI (sem janela de terminal)
-go build -ldflags "-H windowsgui" -o dist\ui.exe .\ui\
-
-# Apenas o installer
-go build -o dist\installer.exe .\installer\
+go build -o dist\installer.exe   .\installer\
+go build -ldflags "-X main.Version=0.1.5 -X main.BuildStamp=0x6A01DF28 -H windowsgui" -o dist\ui.exe .\ui\
 ```
 
-### Atualizar binarios em producao
-
-Quando o servico ja esta instalado e rodando, use o modo `-CleanService`
-para parar tudo, copiar os novos binarios e reiniciar:
+### Atualizar producao
 
 ```powershell
-# Compila e faz deploy automatico
-.\build.ps1
-.\build.ps1 -CleanService
+.\build.ps1                # compila
+.\build.ps1 -CleanService  # para servico + ui.exe, copia dist\ para installer\, reinicia
 ```
-
-O `-CleanService` executa na sequencia:
-1. Para o servico `EpsonFX80Monitor`
-2. Encerra o processo `ui.exe`
-3. Copia `portmonitor.exe`, `installer.exe` e `ui.exe` de `dist\` para `installer\`
-4. Reinicia o servico
-5. Inicia o `ui.exe`
 
 ---
 
@@ -129,441 +109,351 @@ O `-CleanService` executa na sequencia:
 ### Pelo script PowerShell (recomendado)
 
 ```powershell
-# Abra o PowerShell como Administrador
 cd C:\seu-projeto\installer
 .\install.ps1
 ```
 
-O script executa os seguintes passos:
+Passos executados:
 
 | Passo | Acao |
 |---|---|
-| 1 | Verifica se o driver `Generic / Text Only` esta disponivel no Windows |
-| 2 | Cria o diretorio `Documentos\EpsonFX80` para salvar os PDFs |
-| 3 | Registra a porta `\\.\pipe\epson_fx80_emulator` no spooler |
-| 4 | Adiciona a impressora `Epson FX-80 Emulator` no Windows |
-| 5 | Grava configuracoes em `HKLM\SOFTWARE\EpsonFX80Emulator` |
-| 6 | Instala e inicia o servico `EpsonFX80Monitor` |
-| 7 | Cria atalho do `ui.exe` na pasta de inicializacao do Windows |
+| 1 | Verifica driver `Generic / Text Only` |
+| 2 | Cria `Documentos\EpsonFX80` |
+| 3 | Registra porta `\\.\pipe\epson_fx80_emulator` |
+| 4 | Adiciona impressora e aponta para o pipe |
+| 5 | Grava `HKLM\SOFTWARE\EpsonFX80Emulator` |
+| 6 | Instala e inicia `EpsonFX80Monitor` |
+| 7 | Cria atalho em `shell:startup` |
 
-Se a impressora ja estiver instalada, o script detecta e pergunta se deve reinstalar:
+Se a impressora ja existir, o script detecta e pede confirmacao antes de reinstalar.
 
-```
-[AVISO] A impressora 'Epson FX-80 Emulator' ja esta instalada.
-Porta atual : \\.\pipe\epson_fx80_emulator
-Driver atual: Generic / Text Only
-
-Deseja remover e reinstalar? (S/N):
-```
-
-### Pelo installer.exe (alternativa)
+### Manualmente
 
 ```powershell
-# Como Administrador
-.\installer\installer.exe install
-```
+# Adiciona com porta generica, depois aponta para o pipe
+Add-Printer -Name "Epson FX-80 Emulator" -DriverName "Generic / Text Only" -PortName "PORTPROMPT:"
+Set-Printer  -Name "Epson FX-80 Emulator" -PortName "\\.\pipe\epson_fx80_emulator"
 
-### Manualmente (passo a passo)
-
-Se preferir fazer cada etapa manualmente via PowerShell:
-
-```powershell
-# 1. Verificar se o driver generico existe
-Get-PrinterDriver -Name "Generic / Text Only"
-
-# 2. Criar o diretorio de saida
-New-Item -ItemType Directory -Path "$env:USERPROFILE\Documents\EpsonFX80" -Force
-
-# 3. Adicionar a impressora com porta temporaria
-Add-Printer -Name "Epson FX-80 Emulator" `
-    -DriverName "Generic / Text Only" `
-    -PortName "PORTPROMPT:" `
-    -Comment "Emulador Epson FX-80 - Gera PDFs automaticamente" `
-    -Location "Virtual"
-
-# 4. Apontar a porta para o named pipe
-Set-Printer -Name "Epson FX-80 Emulator" `
-    -PortName "\\.\pipe\epson_fx80_emulator"
-
-# 5. Verificar se a porta foi aplicada
-(Get-Printer -Name "Epson FX-80 Emulator").PortName
-# Esperado: \\.\pipe\epson_fx80_emulator
-
-# 6. Gravar configuracoes no registro
-reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "OutputDir" /t REG_SZ /d "$env:USERPROFILE\Documents\EpsonFX80" /f
+# Registro
+reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "OutputDir"   /t REG_SZ    /d "%USERPROFILE%\Documents\EpsonFX80" /f
 reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "PaperType"   /t REG_DWORD /d 0 /f
 reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "TractorFeed" /t REG_DWORD /d 0 /f
 reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "Columns"     /t REG_DWORD /d 80 /f
 
-# 7. Instalar o servico
-sc create EpsonFX80Monitor binPath= "C:\seu-projeto\installer\portmonitor.exe" DisplayName= "Epson FX-80 Port Monitor" start= auto obj= LocalSystem
+# Servico
+sc create EpsonFX80Monitor binPath= "C:\projeto\installer\portmonitor.exe" start= auto obj= LocalSystem
 sc start EpsonFX80Monitor
-
-# 8. Criar atalho de inicializacao
-$wsh = New-Object -ComObject WScript.Shell
-$sc  = $wsh.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\EpsonFX80UI.lnk")
-$sc.TargetPath = "C:\seu-projeto\installer\ui.exe"
-$sc.WindowStyle = 7
-$sc.Save()
-
-# 9. Iniciar a UI
-Start-Process "C:\seu-projeto\installer\ui.exe"
 ```
 
 ---
 
 ## 4. Desinstalacao do driver
 
-### Pelo script PowerShell (recomendado)
-
 ```powershell
-cd C:\seu-projeto\installer
 .\install.ps1 -Uninstall
-```
-
-### Pelo installer.exe (alternativa)
-
-```powershell
-.\installer\installer.exe uninstall
 ```
 
 ### Manualmente
 
 ```powershell
-# 1. Parar e remover o servico
 sc stop EpsonFX80Monitor
 sc delete EpsonFX80Monitor
-
-# 2. Remover a impressora
-Remove-Printer -Name "Epson FX-80 Emulator"
-
-# 3. Remover a porta
+Remove-Printer     -Name "Epson FX-80 Emulator"
 Remove-PrinterPort -Name "\\.\pipe\epson_fx80_emulator"
-
-# 4. Remover entradas do registro
 reg delete "HKLM\SOFTWARE\EpsonFX80Emulator" /f
-
-# 5. Remover atalho de inicializacao
-Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\EpsonFX80UI.lnk" -Force
+Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\EpsonFX80UI.lnk"
 ```
 
 ---
 
 ## 5. Servico Windows (portmonitor)
 
-O `portmonitor.exe` roda como servico Windows sob o nome `EpsonFX80Monitor`.
-Ele escuta o named pipe `\\.\pipe\epson_fx80_emulator`, recebe os dados de
-impressao do spooler do Windows, converte em PDF e registra o job no SQLite.
+O `portmonitor.exe` roda como servico `EpsonFX80Monitor`. Escuta o pipe,
+le os bytes do job, limpa ESC/P, aplica fontes TTF e gera o PDF.
 
-### Comandos do servico
-
-```powershell
-# Verificar status
-sc query EpsonFX80Monitor
-
-# Iniciar
-sc start EpsonFX80Monitor
-
-# Parar
-sc stop EpsonFX80Monitor
-
-# Reiniciar
-sc stop EpsonFX80Monitor
-sc start EpsonFX80Monitor
-
-# Remover (desinstala apenas o servico, nao a impressora)
-sc stop EpsonFX80Monitor
-sc delete EpsonFX80Monitor
-
-# Verificar configuracao do servico
-sc qc EpsonFX80Monitor
-```
-
-### Rodar em modo debug (sem instalar como servico)
-
-Util durante o desenvolvimento para ver os logs em tempo real no terminal:
+### Comandos
 
 ```powershell
-# Para o servico se estiver rodando
-sc stop EpsonFX80Monitor
-
-# Roda diretamente no terminal (Ctrl+C para encerrar)
-.\installer\portmonitor.exe -debug
+sc query  EpsonFX80Monitor    # status atual
+sc start  EpsonFX80Monitor    # iniciar
+sc stop   EpsonFX80Monitor    # parar
+sc qc     EpsonFX80Monitor    # configuracao do servico
+sc delete EpsonFX80Monitor    # remover (nao remove a impressora)
 ```
 
-No modo debug, todos os logs aparecem no terminal e tambem sao gravados
-em `portmonitor.log` ao lado do executavel.
+### Modo debug (terminal)
 
-### Estados possiveis do servico
+```powershell
+sc stop EpsonFX80Monitor
+.\installer\portmonitor.exe -debug   # Ctrl+C para encerrar
+```
+
+### Estados
 
 | Estado | Descricao |
 |---|---|
-| `RUNNING` | Servico ativo, pipe aberto, aguardando jobs |
-| `STOPPED` | Servico parado, jobs ficam na fila do spooler |
-| `START_PENDING` | Iniciando (aguarde alguns segundos) |
-| `STOP_PENDING` | Parando (aguarde alguns segundos) |
-| Nao instalado | Execute `install.ps1` ou `sc create` manualmente |
+| `RUNNING` | Pipe aberto, aguardando jobs |
+| `STOPPED` | Jobs ficam na fila do spooler |
+| `START_PENDING` | Iniciando (aguarde) |
+| Nao instalado | Execute `install.ps1` |
 
 ---
 
 ## 6. Interface grafica (ui.exe)
 
-O `ui.exe` aparece como icone na bandeja do sistema (system tray).
-Nao abre janela ao iniciar -- fica silencioso na bandeja ate ser chamado.
+Aparece como icone na bandeja. Nao abre janela ao iniciar.
 
-### Menu da bandeja (clique com botao direito no icone)
+### Menu da bandeja (botao direito)
 
 | Item | Acao |
 |---|---|
 | Abrir gerenciador | Abre a janela principal |
-| Abrir pasta de PDFs | Abre o Explorer na pasta de saida |
-| Encerrar | Fecha o ui.exe completamente |
+| Abrir pasta de PDFs | Explorer na pasta de saida |
+| Encerrar | Fecha o ui.exe |
 
-### Janela principal -- aba Historico
+### Aba Historico
 
-Exibe todos os jobs de impressao registrados no banco SQLite.
-
-| Coluna | Descricao |
+| Elemento | Descricao |
 |---|---|
-| Data/Hora | Quando o job foi recebido |
-| Arquivo | Nome base do arquivo PDF gerado |
-| Paginas | Numero de paginas do PDF |
-| Tamanho | Tamanho em bytes dos dados recebidos |
-| Acoes | Botao abrir PDF / botao remover do historico |
-
-Botoes da barra:
-- **Atualizar** -- recarrega a lista do banco
-- **Abrir pasta** -- abre o Explorer na pasta dos PDFs
-- **Limpar historico** -- remove todos os registros (PDFs nao sao deletados)
+| Lista de jobs | Data, nome, paginas, tamanho, acoes |
+| Botao abrir | Abre o PDF no visualizador padrao |
+| Botao deletar | Remove do historico (PDF nao e apagado) |
+| Atualizar | Recarrega do banco SQLite |
+| Abrir pasta | Explorer na pasta dos PDFs |
+| Pagina de teste | Gera PDF de teste com todas as fontes |
+| Limpar historico | Remove todos os registros |
 
 A lista atualiza automaticamente a cada 5 segundos.
 
-### Janela principal -- aba Configuracoes
+### Rodape da janela
 
-Permite ajustar as configuracoes de papel e o diretorio de saida.
-Veja a secao [7. Configuracoes de papel](#7-configuracoes-de-papel) para detalhes.
-
-### Inicializacao automatica com o Windows
-
-O `install.ps1` cria automaticamente um atalho em:
-
+Exibe a versao e build stamp em todas as abas:
 ```
-%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\EpsonFX80UI.lnk
+Epson FX-80 Emulator  0.1.5 - 0x6A01DF28
 ```
 
-Para adicionar ou remover manualmente:
+### Inicializacao automatica
+
+O `install.ps1` cria atalho em `shell:startup`. Para gerenciar:
 
 ```powershell
-# Abrir a pasta de inicializacao no Explorer
-explorer shell:startup
-
-# Remover o atalho
-Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\EpsonFX80UI.lnk"
+explorer shell:startup    # abre a pasta de inicializacao
 ```
 
 ---
 
 ## 7. Configuracoes de papel
 
-As configuracoes sao salvas em `HKLM\SOFTWARE\EpsonFX80Emulator` e aplicadas
-a partir do proximo job de impressao.
+Salvas em `HKLM\SOFTWARE\EpsonFX80Emulator`. Aplicadas a partir do proximo job.
 
-### Pela interface grafica
+### Pela UI
 
-1. Clique com botao direito no icone da bandeja
-2. Selecione **Abrir gerenciador**
-3. Clique na aba **Configuracoes**
-4. Ajuste as opcoes desejadas
-5. Clique em **Salvar configuracoes**
+Bandeja > Abrir gerenciador > Configuracoes > secao "Configuracoes de papel"
 
-### Opcoes disponiveis
+### Tipos de papel
 
-#### Tipo de papel
+| Valor | Codigo | Descricao |
+|---|---|---|
+| Branco | 0 | Papel branco simples |
+| Zebrado Verde | 1 | Faixas alternadas verde/branco por linha |
+| Zebrado Azul | 2 | Faixas alternadas azul/branco por linha |
 
-| Valor | Descricao |
-|---|---|
-| Branco | Papel branco simples, sem faixas |
-| Zebrado Verde | Faixas alternadas verde claro / branco, uma faixa por linha |
-| Zebrado Azul | Faixas alternadas azul claro / branco, uma faixa por linha |
-
-#### Largura em colunas
+### Colunas
 
 | Valor | Uso tipico |
 |---|---|
-| 80 colunas | Relatorios padrao, cartas, texto geral |
-| 132 colunas | Planilhas largas, relatorios contabeis, listagens de sistema |
+| 80 | Relatorios padrao, texto geral |
+| 132 | Planilhas largas, listagens contabeis |
 
-A fonte e calculada automaticamente para caber exatamente o numero
-de colunas escolhido na largura do papel A4.
+### Faixa de trator
 
-#### Faixa de trator
+Quando ativa: faixa cinza lateral com furos circulares, espacamento 12.7mm (0.5 pol).
 
-Quando ativada, exibe nos dois lados do papel:
-- Uma faixa cinza simulando a margem destacavel do papel continuo
-- Furos circulares brancos com espacamento de 12.7mm (0.5 polegada),
-  igual ao espacamento real das impressoras matriciais
-
-### Pelo registro do Windows (manual)
+### Pelo registro
 
 ```powershell
-# Tipo de papel: 0=branco, 1=verde, 2=azul
-reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "PaperType" /t REG_DWORD /d 1 /f
-
-# Furos de trator: 0=nao, 1=sim
-reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "TractorFeed" /t REG_DWORD /d 1 /f
-
-# Colunas: 80 ou 132
-reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "Columns" /t REG_DWORD /d 132 /f
-
-# Pasta de saida dos PDFs
-reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "OutputDir" /t REG_SZ /d "D:\MeusPDFs" /f
+reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "PaperType"   /t REG_DWORD /d 1 /f   # verde
+reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "TractorFeed" /t REG_DWORD /d 1 /f   # trator
+reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "Columns"     /t REG_DWORD /d 132 /f # 132 col
+reg add "HKLM\SOFTWARE\EpsonFX80Emulator" /v "OutputDir"   /t REG_SZ    /d "D:\PDFs" /f
 ```
 
 ---
 
-## 8. Diagnostico e logs
+## 8. Configuracao de fontes TTF
+
+Fontes TTF podem ser configuradas individualmente por modo de impressao.
+Cada modo tem uma subpasta dedicada em `installer\fonts\ttf\`.
+
+### Estrutura de pastas
+
+```
+installer\fonts\ttf\
+    regular\              -> modo Regular
+    bold\                 -> modo Bold (Negrito)
+    italic\               -> modo Italic
+    condensed\            -> modo Condensed
+    expanded\             -> modo Expanded
+    bold-italic\          -> modo Bold + Italic
+    condensed-bold\       -> modo Condensed + Bold
+    condensed-italic\     -> modo Condensed + Italic
+    expanded-bold\        -> modo Expanded + Bold
+    expanded-italic\      -> modo Expanded + Italic
+    expanded-bold-italic\ -> modo Expanded + Bold + Italic
+    condensed-bold-italic\-> modo Condensed + Bold + Italic
+```
+
+Coloque os arquivos `.ttf` ou `.otf` na subpasta do modo desejado.
+A UI lista automaticamente os arquivos encontrados.
+
+### Pela UI
+
+Configuracoes > secao "Fontes TTF por modo de impressao" > selecione o arquivo por modo > Salvar
+
+Apos salvar, reinicie o servico para aplicar:
+
+```powershell
+sc stop  EpsonFX80Monitor
+sc start EpsonFX80Monitor
+```
+
+### Pelo registro
+
+```powershell
+$base = "HKLM\SOFTWARE\EpsonFX80Emulator\Fonts"
+reg add $base /v "Regular"   /t REG_SZ /d "C:\...\fonts\ttf\regular\epson.ttf" /f
+reg add $base /v "Bold"      /t REG_SZ /d "C:\...\fonts\ttf\bold\epson-bold.ttf" /f
+reg add $base /v "Italic"    /t REG_SZ /d "C:\...\fonts\ttf\italic\epson-italic.ttf" /f
+```
+
+### Como o fpdf usa as fontes
+
+Cada modo e registrado com uma familia unica no fpdf:
+- `TTF_Regular` -> arquivo Regular
+- `TTF_Bold`    -> arquivo Bold
+- `TTF_Italic`  -> arquivo Italic
+- etc.
+
+Isso garante que `SetFont("TTF_Bold", "", size)` use o arquivo bold real,
+sem depender de mapeamento de estilos da mesma familia.
+
+---
+
+## 9. Pagina de teste
+
+Gera um PDF de diagnostico completo para verificar fontes e configuracoes.
+
+### Pela UI
+
+Aba Historico > botao "Pagina de teste"
+
+Apos gerar, um dialogo pergunta se deseja abrir o PDF imediatamente.
+O job e registrado no historico como qualquer outro.
+
+### Conteudo do PDF
+
+1. **Cabecalho**: versao, build stamp, data/hora
+2. **Regua de 80 colunas**: dois digitos (dezena/unidade) + marcadores em 5 e 10
+3. **ASCII imprimivel**: caracteres 32-126 em linhas de 64
+4. **Bloco por modo** (12 modos):
+   - Identificador do modo e nome do arquivo TTF
+   - Frase: `Epson FX-80 Emulator Driver (Go)`
+   - Digitos e simbolos: `1234567890 !@#$%^&*() ABC...abc...`
+
+---
+
+## 10. Diagnostico e logs
 
 ### Verificacao geral
 
 ```powershell
-# Status resumido de tudo
 .\installer\install.ps1 -Status
-
-# Status detalhado da impressora
 Get-Printer -Name "Epson FX-80 Emulator" | Format-List *
-
-# Jobs na fila do spooler (deve estar vazio se o servico esta rodando)
-Get-PrintJob -PrinterName "Epson FX-80 Emulator"
-
-# Porta configurada
 (Get-Printer -Name "Epson FX-80 Emulator").PortName
-# Esperado: \\.\pipe\epson_fx80_emulator
+Get-PrintJob -PrinterName "Epson FX-80 Emulator"
 ```
 
 ### Logs
 
-| Arquivo | Localizado em | Conteudo |
-|---|---|---|
-| `portmonitor.log` | Mesma pasta do portmonitor.exe | Jobs recebidos, erros de pipe, geracao de PDF |
-| `ui.log` | Mesma pasta do ui.exe | Erros da interface grafica |
+| Arquivo | Conteudo |
+|---|---|
+| `portmonitor.log` | Jobs recebidos, fontes carregadas, erros |
+| `ui.log` | Erros da interface grafica |
 
 ```powershell
-# Ver log do portmonitor em tempo real
-Get-Content .\installer\portmonitor.log -Wait
-
-# Ver ultimas 50 linhas
-Get-Content .\installer\portmonitor.log -Tail 50
+Get-Content .\installer\portmonitor.log -Wait      # tempo real
+Get-Content .\installer\portmonitor.log -Tail 50   # ultimas 50 linhas
 ```
 
 ### Problemas comuns
 
 **Impressora aparece mas nao gera PDF**
-
 ```powershell
-# 1. Verificar se o servico esta rodando
 sc query EpsonFX80Monitor
 # Se STOPPED: sc start EpsonFX80Monitor
-
-# 2. Verificar se a porta esta correta
 (Get-Printer -Name "Epson FX-80 Emulator").PortName
-# Se nao for \\.\pipe\epson_fx80_emulator:
+# Se diferente de \\.\pipe\epson_fx80_emulator:
 Set-Printer -Name "Epson FX-80 Emulator" -PortName "\\.\pipe\epson_fx80_emulator"
-
-# 3. Verificar o log apos tentar imprimir
-Get-Content .\installer\portmonitor.log -Tail 20
 ```
 
-**Servico nao inicia**
-
+**Fontes nao mudam entre modos**
 ```powershell
-# Verificar se o executavel existe
-Test-Path .\installer\portmonitor.exe
-
-# Verificar permissao do servico
-sc qc EpsonFX80Monitor
-
-# Tentar rodar em modo debug para ver o erro
-.\installer\portmonitor.exe -debug
+# Verificar se o servico foi reiniciado apos salvar as fontes
+sc stop  EpsonFX80Monitor
+sc start EpsonFX80Monitor
+Get-Content .\installer\portmonitor.log -Tail 20
+# Deve mostrar linhas "[fonts] Regular -> arquivo.ttf"
 ```
 
 **Erro ao compilar: CGo not enabled**
-
 ```powershell
-# Verificar se CGO esta habilitado
-go env CGO_ENABLED
-# Se retornar 0:
 $env:CGO_ENABLED = "1"
 go build .\portmonitor\
 ```
 
-**Erro ao compilar: gcc not found**
-
-Instale o TDM-GCC e reinicie o terminal. Verifique:
-```powershell
-gcc --version
-```
-
 ---
 
-## 9. Referencia de comandos ESC/P
+## 11. Referencia de comandos ESC/P
 
-> Esta secao sera expandida conforme a emulacao dos comandos ESC/P
-> da Epson FX-80 for implementada no projeto.
+> Esta secao sera expandida conforme a emulacao for implementada.
 
-A Epson FX-80 usa o conjunto de comandos **ESC/P** (Epson Standard Code
-for Printers). Todos os comandos iniciam com o caractere ESC (0x1B)
-seguido de um ou mais bytes de controle.
+### Estado atual
 
-### Estado atual da emulacao
+O `processor.go` detecta e remove sequencias ESC/P do fluxo de texto.
+Os comandos sao reconhecidos mas ainda nao executados (sem efeito no PDF).
 
-O `processor.go` atualmente faz limpeza basica das sequencias ESC/P --
-os comandos sao detectados e removidos do fluxo de texto para nao
-aparecerem como lixo no PDF. A execucao real dos comandos (mudanca de
-fonte, espacamento, graficos) esta no roadmap.
-
-### Comandos implementados (limpeza apenas)
-
-Os comandos abaixo sao reconhecidos e removidos do texto. Ainda nao
-alteram a formatacao do PDF gerado.
+### Comandos reconhecidos (limpeza apenas)
 
 | Comando | Bytes | Descricao |
 |---|---|---|
 | Reset | ESC @ | Inicializa a impressora |
-| Negrito on | ESC E | Ativa modo negrito |
-| Negrito off | ESC F | Desativa modo negrito |
-| Dupla impressao on | ESC G | Ativa dupla impressao |
-| Dupla impressao off | ESC H | Desativa dupla impressao |
-| Italico on | ESC 4 | Ativa modo italico |
-| Italico off | ESC 5 | Desativa modo italico |
-| Sublinhado on | ESC - 1 | Ativa sublinhado |
-| Sublinhado off | ESC - 0 | Desativa sublinhado |
-| Expandido on | ESC W 1 | Ativa modo expandido (largura dupla) |
-| Expandido off | ESC W 0 | Desativa modo expandido |
-| Condensado on | ESC SI | Ativa modo condensado (17 cpi) |
-| Condensado off | ESC DC2 | Desativa modo condensado |
+| Negrito on/off | ESC E / ESC F | Ativa/desativa negrito |
+| Dupla impressao | ESC G / ESC H | Ativa/desativa dupla passagem |
+| Italico on/off | ESC 4 / ESC 5 | Ativa/desativa italico |
+| Sublinhado | ESC - 1/0 | Ativa/desativa sublinhado |
+| Expandido | ESC W 1/0 | Largura dupla on/off |
+| Condensado on | ESC SI (0x0F) | 17 cpi |
+| Condensado off | ESC DC2 (0x12) | Retorna ao normal |
 | Avanco de linha | ESC J n | Avanca n/216 polegadas |
-| Espacamento de linha | ESC A n | Define espacamento (n/72 pol) |
-| Espacamento padrao | ESC 2 | Restaura espacamento 1/6 pol |
-| Pular perfuracao | ESC N n | Define margem de perfuracao |
+| Espacamento | ESC A n | Define n/72 pol por linha |
+| Espacamento padrao | ESC 2 | Restaura 1/6 pol |
 
 ### Comandos a implementar
 
 | Comando | Bytes | Descricao |
 |---|---|---|
-| Bit image (modo 0) | ESC K n1 n2 data | Graficos de pinos 60 dpi |
-| Bit image (modo 1) | ESC L n1 n2 data | Graficos de pinos 120 dpi |
-| Bit image (modo 2) | ESC Y n1 n2 data | Graficos de pinos 120 dpi alta vel |
-| Bit image (modo 3) | ESC Z n1 n2 data | Graficos de pinos 240 dpi |
-| Tab horizontal | HT (0x09) | Avanca ate a proxima parada de tab |
-| Definir tabs | ESC D n... NUL | Define paradas de tab |
-| Margem esquerda | ESC l n | Define margem esquerda |
-| Margem direita | ESC Q n | Define margem direita |
-| Comprimento pagina | ESC C n | Define comprimento em linhas |
-| Comprimento pol | ESC C NUL n | Define comprimento em polegadas |
-| Selecao de caractere | ESC R n | Seleciona tabela de caracteres internacionais |
-| Paginacao | FF (0x0C) | Avanca para o inicio da proxima pagina |
+| Bit image modo 0 | ESC K n1 n2 data | Graficos 60 dpi |
+| Bit image modo 1 | ESC L n1 n2 data | Graficos 120 dpi |
+| Bit image modo 2 | ESC Y n1 n2 data | Graficos 120 dpi alta vel |
+| Bit image modo 3 | ESC Z n1 n2 data | Graficos 240 dpi |
+| Tab horizontal | HT (0x09) | Proxima parada de tab |
+| Definir tabs | ESC D n... NUL | Define paradas |
+| Margem esquerda | ESC l n | Define margem |
+| Margem direita | ESC Q n | Define margem |
+| Comprimento pagina | ESC C n | Linhas por pagina |
+| Codepage | ESC R n | Tabela de caracteres internacionais |
 
 ---
 
-*Manual gerado para o projeto Epson FX-80 Emulator*
-*Ambiente: Go 1.22 / GoLand / Windows / PowerShell / Claude (Anthropic)*
+*Manual do Epson FX-80 Emulator v0.1.5*
+*Go 1.22 / GoLand / Windows / PowerShell / Claude (Anthropic)*

@@ -38,6 +38,7 @@ type Options struct {
 	Cols        Columns
 	TractorFeed bool            // exibe faixa lateral com furos de trator
 	Fonts       fontmgr.FontMap // mapeamento modo -> arquivo TTF (nil = usar Courier)
+	VersionLine string          // linha de versao para cabecalhos (opcional)
 }
 
 // DefaultOptions retorna as opcoes padrao (papel branco, 80 col, sem trator).

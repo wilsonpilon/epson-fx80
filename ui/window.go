@@ -186,6 +186,25 @@ func buildJobsTab(w fyne.Window) fyne.CanvasObject {
 		openOutputDir()
 	})
 
+	testPageBtn := widget.NewButtonWithIcon("Pagina de teste", theme.DocumentPrintIcon(), func() {
+		path, err := generateTestPage()
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("Erro ao gerar pagina de teste:\n%v", err), w)
+			return
+		}
+		dialog.ShowConfirm(
+			"Pagina de teste gerada",
+			fmt.Sprintf("PDF salvo em:\n%s\n\nDeseja abrir agora?", path),
+			func(ok bool) {
+				if ok {
+					openFile(path)
+				}
+				refresh()
+			},
+			w,
+		)
+	})
+
 	countLabel := widget.NewLabel("")
 
 	// Auto-refresh a cada 5 segundos
@@ -202,7 +221,7 @@ func buildJobsTab(w fyne.Window) fyne.CanvasObject {
 		}
 	}()
 
-	toolbar := container.NewHBox(refreshBtn, openFolderBtn, clearAllBtn, widget.NewSeparator(), countLabel)
+	toolbar := container.NewHBox(refreshBtn, openFolderBtn, clearAllBtn, widget.NewSeparator(), testPageBtn, widget.NewSeparator(), countLabel)
 	return container.NewBorder(
 		container.NewVBox(toolbar, headers),
 		nil, nil, nil,

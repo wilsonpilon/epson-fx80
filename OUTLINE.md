@@ -1,10 +1,9 @@
 # OUTLINE -- Epson FX-80 Emulator
 
-Este documento descreve o historico de decisoes, a arquitetura atual e o
-estado do projeto em detalhes suficientes para que um desenvolvedor ou IA
-possa continuar o desenvolvimento a partir deste ponto sem perder contexto.
+Documento de contexto para continuidade do desenvolvimento.
+Leia este arquivo antes de qualquer outra coisa ao retomar o projeto.
 
-Versao documentada: **0.1.3**
+Versao documentada: **0.1.5**
 Data: 2026-05-11
 Ambiente: Go 1.22 / GoLand / Windows 10-11 x64 / PowerShell / Claude (Anthropic)
 
@@ -15,81 +14,70 @@ Ambiente: Go 1.22 / GoLand / Windows 10-11 x64 / PowerShell / Claude (Anthropic)
 Criar um driver de impressora virtual para Windows que emula 100% uma
 impressora matricial Epson FX-80. Qualquer aplicativo Windows pode imprimir
 nela normalmente. Os dados sao capturados, processados e salvos como PDF
-com visual fiel ao papel continuo da epoca (zebrado, furos de trator, fonte
-monoespaco, 80 ou 132 colunas).
+com visual fiel ao papel continuo da epoca.
 
-Trata-se de um trabalho em curso. A emulacao completa do conjunto de
-comandos ESC/P ainda esta sendo implementada progressivamente.
+Trabalho em curso. A emulacao completa do ESC/P esta no roadmap.
 
 ---
 
-## 2. Decisoes de arquitetura e por que foram tomadas
+## 2. Decisoes de arquitetura
 
-### 2.1 Por que nao usar um driver kernel-mode
+### 2.1 Driver sem kernel-mode
 
-Drivers kernel-mode no Windows exigem assinatura digital obrigatoria
-(WHQL), compilacao com WDK e processo de instalacao complexo. A alternativa
-adotada foi usar o driver `Generic / Text Only` que ja vem instalado no
-Windows e redirecionar a porta de impressao para um named pipe. Simples,
-sem dependencias externas e funciona em qualquer Windows 10/11.
+Drivers kernel-mode exigem assinatura WHQL e WDK. Usamos o driver
+`Generic / Text Only` ja presente no Windows com a porta redirecionada
+para um named pipe.
 
-### 2.2 Como o named pipe funciona como porta de impressora
+### 2.2 Named pipe como porta de impressora
 
-O spooler do Windows, ao imprimir em uma "Local Port", chama `CreateFile()`
-com o nome da porta. No Windows, `CreateFile("\\.\pipe\nome")` abre um
-named pipe. Logo, se o nome da porta for o path do pipe, o spooler escreve
-diretamente nele.
+O spooler chama `CreateFile()` com o nome da porta. `CreateFile("\\.\pipe\nome")`
+abre um named pipe. Logo, o nome da porta pode ser o path do pipe diretamente.
 
-A porta deve ser configurada assim (nao via `Add-PrinterPort`, mas via
-`Set-Printer` depois de adicionar com porta generica):
-
+Sequencia obrigatoria (Add com porta generica, depois Set):
 ```powershell
-Add-Printer -Name "Epson FX-80 Emulator" -DriverName "Generic / Text Only" -PortName "PORTPROMPT:"
-Set-Printer  -Name "Epson FX-80 Emulator" -PortName "\\.\pipe\epson_fx80_emulator"
+Add-Printer -Name "..." -PortName "PORTPROMPT:"
+Set-Printer  -Name "..." -PortName "\\.\pipe\epson_fx80_emulator"
+```
+`Add-PrinterPort` com nome de pipe falha em alguns sistemas.
+
+### 2.3 Fontes TTF com familias unicas no fpdf
+
+O fpdf mapeia Bold/Italic como estilos de uma familia. Se a Regular, Bold e
+Italic forem arquivos TTF diferentes, registrar como estilos da mesma familia
+faz o fpdf ignorar os arquivos Bold/Italic. A solucao correta:
+
+```go
+pdf.AddUTF8Font("TTF_Regular", "", pathRegular)  // familia unica
+pdf.AddUTF8Font("TTF_Bold",    "", pathBold)      // familia unica
+pdf.AddUTF8Font("TTF_Italic",  "", pathItalic)    // familia unica
+// Para usar: pdf.SetFont("TTF_Bold", "", size)
 ```
 
-Tentativas de usar `Add-PrinterPort` com o nome do pipe falhavam em alguns
-sistemas. A solucao estavel foi: adicionar com porta generica, depois
-trocar com `Set-Printer`.
+### 2.4 Icone do system tray deve ser PNG
 
-### 2.3 Linguagem e bibliotecas
+Fyne no Windows nao renderiza SVG como icone de bandeja. PNG 256x256
+embutido em base64 no codigo Go (ui/icon.go).
 
-| Componente | Escolha | Motivo |
-|---|---|---|
-| Linguagem | Go 1.22 | Preferencia do autor; binarios estaticos; sem runtime |
-| Named pipe | go-winio | Unica biblioteca Go madura para named pipes no Windows |
-| PDF | go-pdf/fpdf | Leve, sem dependencias nativas, suporte a Courier |
-| Banco | mattn/go-sqlite3 | Padrao para SQLite em Go; requer CGo/GCC |
-| UI | fyne.io/fyne v2.4.5 | Framework Go nativo para desktop; suporta system tray |
-| Registro | golang.org/x/sys/windows/registry | Acesso direto ao registro sem cgo extra |
-| Scripts | PowerShell | Ja presente no Windows; cmdlets de impressora nativos |
+### 2.5 Scripts .ps1 em ASCII puro
 
-### 2.4 Icone do system tray deve ser PNG, nao SVG
+Caracteres UTF-8 (travessao, checkmark, linhas de caixa) causam erros
+de parse no PowerShell. Todos os .ps1 devem ser ASCII puro (<= 0x7F).
 
-O Fyne no Windows nao renderiza SVG como icone de bandeja -- aparece
-quadrado cinza. A solucao foi converter o SVG para PNG 256x256 com cairosvg
-e embutir o PNG em base64 diretamente no codigo Go (ui/icon.go).
+### 2.6 Registro via reg.exe
 
-### 2.5 Scripts PowerShell devem ser ASCII puro
+`New-Item` / `Set-ItemProperty` para HKLM falha em alguns contextos mesmo
+como admin. Usar `reg.exe add` diretamente funciona de forma consistente.
 
-Caracteres UTF-8 como travessao (U+2014), checkmark (U+2713) e linhas
-de caixa (U+2500) causam erros de parse no PowerShell dependendo da
-configuracao de encoding do terminal. Todos os .ps1 foram mantidos em
-ASCII puro, substituindo esses caracteres por equivalentes ASCII.
+### 2.7 ldflags para versao e build stamp
 
-### 2.6 Configuracoes no registro do Windows
-
-Todas as configuracoes ficam em `HKLM\SOFTWARE\EpsonFX80Emulator`.
-O uso de `New-Item` do PowerShell para criar chaves HKLM falha com
-"registry access is not allowed" mesmo como admin em alguns contextos.
-A solucao foi usar `reg.exe add` diretamente, que funciona de forma
-consistente.
-
-### 2.7 Servico Windows para o portmonitor
-
-O portmonitor roda como servico Windows (`sc create ... start= auto`).
-Isso garante que ele inicie automaticamente com o Windows e rode em
-background. Tambem pode rodar no terminal com `-debug` para desenvolvimento.
+```powershell
+$BuildHex  = "0x{0:X}" -f [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$LDVersion = "-X main.Version=0.1.5 -X main.BuildStamp=$BuildHex"
+$UILDFlags = "$LDVersion -H windowsgui"
+& go build -ldflags $UILDFlags -o dist\ui.exe .\ui\
+```
+Usar `& go build` (operador `&`) e variavel intermediaria `$UILDFlags`
+evita o erro "parameter may not start with quote character".
 
 ---
 
@@ -97,291 +85,214 @@ background. Tambem pode rodar no terminal com `-debug` para desenvolvimento.
 
 ```
 epson-fx80-emulator/
-    go.mod                  modulo: github.com/epson-fx80-emulator
-    build.ps1               compila e faz deploy; suporta -CleanService
-    README.md               descricao geral e ambiente
-    MANUAL.md               instrucoes operacionais completas
-    CHANGELOG.md            historico de versoes
-    OUTLINE.md              este arquivo
+    go.mod                   modulo: github.com/epson-fx80-emulator
+    build.ps1                compila; -CleanService para deploy
+    README.md / MANUAL.md / OUTLINE.md / CHANGELOG.md / REFERENCE.md
 
     installer/
-        install.ps1         instala/desinstala a impressora (script principal)
-        main.go             versao Go do installer (gera installer.exe)
+        install.ps1          instala/desinstala/status
+        main.go              installer.exe
+        fonts/ttf/           subpastas por modo (regular, bold, italic, ...)
 
     portmonitor/
-        main.go             entry point; detecta servico vs terminal vs debug
-        service.go          interface svc.Handler para o SCM do Windows
-        monitor.go          loop do named pipe; aceita conexoes do spooler
-        processor.go        orquestra: leitura -> limpeza ESC/P -> PDF -> SQLite
+        main.go              entry point; preloadFonts(); global fontManager
+        service.go           svc.Handler para SCM
+        monitor.go           loop named pipe; goroutine por job
+        processor.go         bytesToText -> pdfgen.Generate + storage
 
     pdfgen/
-        pdfgen.go           gera PDF com opcoes de papel (zebrado, trator, colunas)
-        options.go          le Options do registro do Windows
+        pdfgen.go            Generate(path, text, opts); registerFonts()
+        options.go           LoadOptions() do registro
+        testpage.go          GenerateTestPage(path, []FontEntry, versionLine)
 
     storage/
-        storage.go          SQLite: open, migrate, insert, list, delete, count
+        storage.go           SQLite: Open, InsertJob, ListJobs, DeleteJob
+
+    fontmgr/
+        fontmgr.go           AllModes, SubfolderForMode, AvailableFonts, Save/Load
 
     ui/
-        main.go             entry point; configura system tray e janela
-        window.go           janela principal: aba Historico, Configuracoes, Sobre
-        config.go           le/grava Config no registro; helpers (openFile, etc.)
-        icon.go             PNG 256x256 da impressora matricial em base64
+        main.go              app Fyne; system tray; buildTrayMenu
+        window.go            tabs: Historico, Configuracoes, Sobre; versionBar
+        config.go            Config struct; loadConfig/saveConfig; executableDir
+        icon.go              PNG 256x256 base64
+        version.go           var Version, BuildStamp; FullVersion(); WindowTitle()
+        testpage.go          generateTestPage(); buildFontEntries()
 ```
 
 ---
 
-## 4. Fluxo completo de um job de impressao
+## 4. Fluxo completo de um job
 
 ```
-1. Usuario imprime de qualquer aplicativo para "Epson FX-80 Emulator"
-2. Spooler do Windows chama CreateFile("\\.\pipe\epson_fx80_emulator")
-3. Spooler escreve os bytes do job no pipe
-4. monitor.go aceita a conexao e chama handleJob() em goroutine
-5. handleJob() le todos os bytes com io.ReadAll()
-6. processor.go chama bytesToText() para converter bytes em UTF-8
-7. cleanControlChars() remove sequencias ESC/P e caracteres de controle
-8. pdfgen.LoadOptions() le as configuracoes de papel do registro
-9. pdfgen.Generate() cria o PDF com fonte Courier, papel e trator configurados
-10. PDF salvo em OutputDir com nome: YYYYMMDD_HHMMSS_jobNNNN.pdf
-11. storage.InsertJob() registra o job no SQLite
-12. ui.exe detecta o novo job no auto-refresh de 5 segundos e exibe na lista
+1. App imprime para "Epson FX-80 Emulator"
+2. Spooler -> CreateFile("\\.\pipe\epson_fx80_emulator")
+3. monitor.go aceita conexao -> goroutine handleJob()
+4. io.ReadAll() -> bytes do job
+5. bytesToText() -> UTF-8; cleanControlChars() remove ESC/P
+6. pdfgen.LoadOptions() -> papel, colunas, trator do registro
+7. fontManager.Map injetado em opts.Fonts
+8. pdfgen.Generate() -> PDF com TTFs por familia unica
+9. storage.InsertJob() -> SQLite
+10. ui.exe auto-refresh detecta novo job
 ```
 
 ---
 
-## 5. Configuracoes no registro do Windows
+## 5. Registro do Windows
 
 Chave: `HKLM\SOFTWARE\EpsonFX80Emulator`
 
-| Valor | Tipo | Descricao | Default |
-|---|---|---|---|
-| OutputDir | REG_SZ | Pasta onde os PDFs sao salvos | Documentos\EpsonFX80 |
-| MonitorExe | REG_SZ | Caminho completo do portmonitor.exe | (definido pelo install.ps1) |
-| PortName | REG_SZ | Nome da porta (informativo) | \\.\pipe\epson_fx80_emulator |
-| PrinterName | REG_SZ | Nome da impressora (informativo) | Epson FX-80 Emulator |
-| PaperType | REG_DWORD | 0=branco, 1=verde zebrado, 2=azul zebrado | 0 |
-| TractorFeed | REG_DWORD | 0=sem trator, 1=com faixa e furos laterais | 0 |
-| Columns | REG_DWORD | 80 ou 132 | 80 |
+| Valor | Tipo | Default |
+|---|---|---|
+| OutputDir | REG_SZ | Documentos\EpsonFX80 |
+| PaperType | REG_DWORD | 0 (branco) |
+| TractorFeed | REG_DWORD | 0 (sem) |
+| Columns | REG_DWORD | 80 |
+| MonitorExe | REG_SZ | caminho do portmonitor.exe |
+| PrinterName | REG_SZ | Epson FX-80 Emulator |
+
+Subchave: `HKLM\SOFTWARE\EpsonFX80Emulator\Fonts`
+
+| Valor | Descricao |
+|---|---|
+| Regular | Caminho absoluto do TTF Regular |
+| Bold | Caminho absoluto do TTF Bold |
+| Italic | Caminho absoluto do TTF Italic |
+| Condensed | ... |
+| Expanded | ... |
+| BoldItalic | ... |
+| CondensedBold | ... |
+| CondensedItalic | ... |
+| ExpandedBold | ... |
+| ExpandedItalic | ... |
+| ExpandedBoldItalic | ... |
+| CondensedBoldItalic | ... |
 
 ---
 
-## 6. API publica dos pacotes Go
+## 6. API dos pacotes
 
 ### pdfgen
 
 ```go
-// Tipos
 type PaperType int  // PaperWhite=0, PaperGreenZebra=1, PaperBlueZebra=2
 type Columns   int  // Columns80=80, Columns132=132
 type Options struct {
-    Paper       PaperType
-    Cols        Columns
-    TractorFeed bool
+    Paper, Cols, TractorFeed, Fonts fontmgr.FontMap, VersionLine string
 }
-
-// Funcoes
+type FontEntry struct {
+    Mode fontmgr.Mode; Label, FontFile, FontName string
+}
 func DefaultOptions() Options
-func LoadOptions() Options                              // le do registro
-func Generate(pdfPath, text string, opts Options) (int, error)
+func LoadOptions() Options
+func Generate(path, text string, opts Options) (int, error)
+func GenerateTestPage(path string, entries []FontEntry, versionLine string) (int, error)
+```
+
+### fontmgr
+
+```go
+type Mode string  // ModeRegular, ModeBold, ..., ModeCondensedBoldItalic
+var AllModes []Mode
+func ModeLabel(m Mode) string
+func SubfolderForMode(m Mode) string
+type Manager struct { FontsDir string; Map FontMap }
+func NewManager(execDir string) *Manager
+func (m *Manager) AvailableFonts(mode Mode) []string
+func (m *Manager) AvailableFontNames(mode Mode) []string
+func (m *Manager) SelectedFont(mode Mode) string
+func (m *Manager) SetFontByName(mode Mode, name string)
+func (m *Manager) Save() error
+func (m *Manager) HasFontsDir() bool
 ```
 
 ### storage
 
 ```go
-type Job struct {
-    ID, Name, PDFPath string
-    Pages, ByteSize   int
-    CreatedAt         time.Time
-}
-type DB struct { ... }
-
+type Job struct { ID int64; Name, PDFPath string; Pages, ByteSize int; CreatedAt time.Time }
 func Open(path string) (*DB, error)
-func (db *DB) Close() error
-func (db *DB) InsertJob(j Job) error
+func (db *DB) InsertJob(Job) error
 func (db *DB) ListJobs(limit int) ([]Job, error)
 func (db *DB) DeleteJob(id int64) error
 func (db *DB) CountJobs() (int, error)
 ```
 
-### portmonitor (package main -- nao importavel)
+### portmonitor globals
 
-Constantes relevantes:
 ```go
 const ServiceName = "EpsonFX80Monitor"
 const PipeName    = `\\.\pipe\epson_fx80_emulator`
+var   fontManager *fontmgr.Manager  // pre-carregado em preloadFonts()
 ```
 
-Funcoes principais:
-```go
-func runMonitorWithStop(stop <-chan struct{})  // loop principal do pipe
-func processJob(jobID int, baseName string, data []byte) error
-func bytesToText(data []byte) string
-func cleanControlChars(s string) string
-func skipEscSeq(runes []rune, i int) int
-```
-
-### ui (package main -- nao importavel)
+### ui globals
 
 ```go
-type Config struct {
-    OutputDir   string
-    PaperType   int   // 0=branco, 1=verde, 2=azul
-    TractorFeed bool
-    Columns     int   // 80 ou 132
-}
-func loadConfig() Config
-func saveConfig(cfg Config) error
-func printerIcon() fyne.Resource  // PNG 256x256 em base64
+var Version    = "0.1.5"      // injetado via -ldflags
+var BuildStamp = "0xDEV00000" // injetado via -ldflags
+func FullVersion() string     // "0.1.5 - build 0x6A01DF28"
+func WindowTitle() string
 ```
 
 ---
 
-## 7. Scripts PowerShell
+## 7. Problemas conhecidos e solucoes
 
-### build.ps1
-
-```
-.\build.ps1               -- compila portmonitor.exe, installer.exe, ui.exe para dist\
-.\build.ps1 -CleanService -- para EpsonFX80Monitor, encerra ui.exe,
-                             copia dist\ para installer\, reinicia tudo
-```
-
-Variaveis importantes:
-- `$OutDir`      = `$PSScriptRoot\dist`
-- `$InstDir`     = `$PSScriptRoot\installer`
-- `$ServiceName` = `EpsonFX80Monitor`
-- `$env:CGO_ENABLED = "1"` (obrigatorio para go-sqlite3)
-
-### installer/install.ps1
-
-```
-.\install.ps1             -- instala a impressora
-.\install.ps1 -Uninstall  -- desinstala tudo
-.\install.ps1 -Status     -- mostra status atual
-```
-
-Variaveis importantes:
-- `$PrinterName` = `Epson FX-80 Emulator`
-- `$DriverName`  = `Generic / Text Only`
-- `$PortName`    = `\\.\pipe\epson_fx80_emulator`
-- `$ServiceName` = `EpsonFX80Monitor`
-- `$MonitorExe`  = `$ScriptDir\portmonitor.exe`
-- `$UIExe`       = `$ScriptDir\ui.exe`
-- `$ShortcutPath`= `shell:startup\EpsonFX80UI.lnk`
-
----
-
-## 8. Problemas conhecidos e solucoes ja aplicadas
-
-| Problema | Causa | Solucao aplicada |
+| Problema | Causa | Solucao |
 |---|---|---|
-| Icone cinza no system tray | Fyne nao renderiza SVG como icone no Windows | PNG 256x256 em base64 em icon.go |
-| Script PS1 com erro de parse | Caracteres UTF-8 no arquivo | Todos .ps1 em ASCII puro |
-| Registro nao grava com New-Item | Token de admin insuficiente em alguns contextos | Usar reg.exe add diretamente |
-| Porta nao redireciona para pipe | Add-PrinterPort rejeita nome de pipe | Adicionar com PORTPROMPT:, depois Set-Printer |
-| Erro ao copiar ui.exe no -CleanService | ui.exe rodando e bloqueando o arquivo | Stop-Process -Name "ui" antes de Copy-Item |
-| "no Go files" no build | go build com path absoluto no Windows | Usar ./ relativo apos Set-Location $PSScriptRoot |
-| Servico nao recebe jobs | Porta apontava para FX80EMUL: literal | Trocar porta para o path do named pipe |
+| Icone cinza no tray | Fyne nao renderiza SVG no Windows | PNG base64 em icon.go |
+| .ps1 com erro de parse | UTF-8 acima de 0x7F | ASCII puro em todos .ps1 |
+| Registro nao grava | Token admin insuficiente | reg.exe add direto |
+| Porta nao redireciona | Add-PrinterPort rejeita pipe | Adicionar com PORTPROMPT:, depois Set-Printer |
+| ui.exe bloqueado no copy | Processo rodando | Stop-Process -Name "ui" antes de Copy-Item |
+| "no Go files" no build | go build com path absoluto | ./ relativo + Set-Location |
+| Fontes nao mudam | Familias com mesmo nome no fpdf | Familia unica por modo (TTF_Bold etc.) |
+| ldflags com aspas | PowerShell re-interpreta aspas | Operador & + variavel $UILDFlags |
 
 ---
 
-## 9. Estado atual da emulacao ESC/P
+## 8. Estado da emulacao ESC/P
 
-O `cleanControlChars()` em `portmonitor/processor.go` detecta e remove
-sequencias ESC/P do fluxo de texto. Os comandos sao **ignorados** (nao
-executados) -- apenas removidos para nao aparecerem como lixo no PDF.
-
-Sequencias reconhecidas para remocao (tamanho fixo):
-```
-ESC @ ESC E ESC F ESC G ESC H ESC 4 ESC 5 ESC 6 ESC 7 ESC 8 ESC 9
-ESC < ESC = ESC > ESC M ESC P ESC T ESC O  (0 bytes de parametro)
-ESC W ESC A ESC J ESC N ESC Q ESC R ESC S ESC U ESC i ESC l ESC 3 ESC 1
-(1 byte de parametro)
-```
-
-**Proximo passo na emulacao:** implementar execucao real dos comandos,
-comecando pelos mais comuns: ESC E/F (negrito), ESC 4/5 (italico),
-ESC W (expandido), ESC SI/DC2 (condensado).
+Atual: `cleanControlChars()` remove sequencias ESC/P sem executar.
+Proximo: implementar execucao real comecando por ESC E/F (negrito) e ESC 4/5 (italico).
 
 ---
 
-## 10. Proximos passos recomendados
-
-### Imediatos (versao 0.2.0)
-1. Implementar execucao real dos comandos ESC/P basicos no `processor.go`
-   - Negrito (ESC E / ESC F) -- usar `pdf.SetFont(..., "B", ...)`
-   - Italico (ESC 4 / ESC 5) -- usar `pdf.SetFont(..., "I", ...)`
-   - Expandido (ESC W 1/0) -- dobrar o tamanho da fonte
-   - Condensado (ESC SI) -- reduzir o tamanho da fonte (17 cpi)
-2. Notificacao na bandeja do sistema quando um novo PDF for gerado
-3. Preview descritivo do PDF na UI antes de abrir
-
-### Medio prazo (versao 0.3.0)
-4. Graficos de pinos (bit image) -- ESC K, ESC L, ESC Y, ESC Z
-5. Suporte a codepages internacionais -- ESC R n
-6. Testes automatizados para o pdfgen com diferentes opcoes de papel
-
-### Longo prazo (versao 1.0.0)
-7. Emulacao 100% do ESC/P da FX-80 documentada no MANUAL.md
-8. Suite de testes com jobs reais de sistemas da epoca (COBOL, dBase, etc.)
-
----
-
-## 11. Como continuar o desenvolvimento
-
-### Configurar o ambiente
+## 9. Como continuar o desenvolvimento
 
 ```powershell
-# 1. Instalar Go 1.22+ em go.dev/dl
-# 2. Instalar TDM-GCC em jmeubank.github.io/tdm-gcc
-# 3. Clonar/copiar o projeto para C:\seu-projeto\
-# 4. Verificar ambiente
-go version          # go1.22.x
-gcc --version       # tdm64 10.3+
+# Ambiente
+go version; gcc --version
 
-# 5. Baixar dependencias
-cd C:\seu-projeto
+# Baixar dependencias
+cd C:\projeto
 go mod tidy
 
-# 6. Compilar
+# Compilar e instalar
 .\build.ps1
+cd installer; .\install.ps1
 
-# 7. Instalar a impressora (como Admin)
-cd installer
-.\install.ps1
-
-# 8. Testar
-# Abrir Bloco de Notas, digitar texto, Ctrl+P
-# Selecionar "Epson FX-80 Emulator", imprimir
-# PDF aparece em Documentos\EpsonFX80\
-```
-
-### Fluxo de desenvolvimento diario
-
-```powershell
-# Editar codigo no GoLand
-# Compilar e atualizar servico
+# Fluxo diario
 .\build.ps1
 .\build.ps1 -CleanService
 
-# Ver logs em tempo real
-Get-Content .\installer\portmonitor.log -Wait
-
-# Para desenvolvimento do portmonitor sem servico
+# Debug
 sc stop EpsonFX80Monitor
 .\installer\portmonitor.exe -debug
+Get-Content .\installer\portmonitor.log -Wait
 ```
 
-### Convencoes do projeto
+### Convencoes
 
-- Todos os arquivos `.ps1` em ASCII puro (sem UTF-8 acima de 0x7F)
-- Comentarios em portugues; codigo em ingles/portugues misturado (ok)
-- Sem `fmt.Println` no portmonitor em producao -- usar `log.Printf`
-- Toda configuracao persistente vai para `HKLM\SOFTWARE\EpsonFX80Emulator`
-- PDF gerado sempre em `OutputDir` com nome `YYYYMMDD_HHMMSS_jobNNNN.pdf`
-- Erros nao-fatais: logar e continuar; erros fatais: `log.Fatalf`
+- `.ps1` em ASCII puro (sem UTF-8 > 0x7F)
+- Comentarios em portugues; codigo em portugues/ingles
+- Sem `fmt.Println` no portmonitor -- usar `log.Printf`
+- Configs em `HKLM\SOFTWARE\EpsonFX80Emulator`
+- PDFs em `OutputDir` com nome `YYYYMMDD_HHMMSS_jobNNNN.pdf`
+- Erros nao-fatais: log + continue; fatais: `log.Fatalf`
+- Familias TTF no fpdf: sempre `"TTF_" + string(mode)`
 
 ---
 
-*OUTLINE gerado em 2026-05-11 para o Epson FX-80 Emulator v0.1.3*
-*Desenvolvido com Go 1.22 + GoLand + Windows + PowerShell + Claude (Anthropic)*
+*OUTLINE v0.1.5 -- 2026-05-11*
