@@ -1,0 +1,29 @@
+2026/05/11 06:15:42 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:15:42 log.go:14:   Cause: image: unknown format
+2026/05/11 06:15:42 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:15:42 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:15:42 log.go:14:   Cause: image: unknown format
+2026/05/11 06:15:42 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:33:57 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:33:57 log.go:14:   Cause: image: unknown format
+2026/05/11 06:33:57 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:33:57 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:33:57 log.go:14:   Cause: image: unknown format
+2026/05/11 06:33:57 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:35:28 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:35:28 log.go:14:   Cause: image: unknown format
+2026/05/11 06:35:28 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:35:28 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:35:28 log.go:14:   Cause: image: unknown format
+2026/05/11 06:35:28 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:35:46 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:35:46 log.go:14:   Cause: image: unknown format
+2026/05/11 06:35:46 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:35:47 log.go:12: Fyne error:  Failed to convert systray icon
+2026/05/11 06:35:47 log.go:14:   Cause: image: unknown format
+2026/05/11 06:35:47 log.go:19:   At: C:/Users/wilso/go/pkg/mod/fyne.io/fyne/v2@v2.4.5/internal/driver/glfw/driver_desktop.go:171
+2026/05/11 06:40:50 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 06:41:02 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 06:53:13 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 06:53:27 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
+2026/05/11 06:59:05 systray_windows.go:990: systray error: unable to set icon: tray not ready yet
