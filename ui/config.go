@@ -19,9 +19,9 @@ const regKeyPath = `SOFTWARE\EpsonFX80Emulator`
 // Config armazena todas as configuracoes da aplicacao.
 type Config struct {
 	OutputDir   string
-	PaperType   int  // 0=branco 1=verde 2=azul
+	PaperType   int // 0=branco 1=verde 2=azul
 	TractorFeed bool
-	Columns     int  // 80 ou 132
+	Columns     int // 80 ou 132
 }
 
 // loadConfig le as configuracoes do registro. Usa defaults se nao encontrar.
@@ -79,6 +79,15 @@ func saveConfig(cfg Config) error {
 		}
 	}
 	return nil
+}
+
+// executableDir retorna o diretorio do executavel atual.
+func executableDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	return filepath.Dir(exe)
 }
 
 func defaultOutputDir() string {

@@ -85,3 +85,102 @@
 2026/05/11 06:59:55 monitor.go:76: [job #1] 4477 bytes recebidos
 2026/05/11 06:59:55 processor.go:33: [job #1] Gerando PDF: C:\Users\wilso\Documents\EpsonFX80\20260511_065955_job0001.pdf
 2026/05/11 06:59:55 processor.go:40: [job #1] PDF gerado com 1 pagina(s)
+2026/05/11 10:48:50 service.go:33: [servico] Parando...
+2026/05/11 10:55:05 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 10:55:05 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 10:55:05 service.go:19: [servico] Iniciando monitor...
+2026/05/11 10:55:05 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 10:55:05 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 10:55:05 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 10:55:33 service.go:33: [servico] Parando...
+2026/05/11 10:55:33 service.go:21: [servico] Monitor encerrado.
+2026/05/11 10:55:36 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 10:55:36 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 10:55:36 service.go:19: [servico] Iniciando monitor...
+2026/05/11 10:55:36 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 10:55:36 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 10:55:36 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 10:56:31 service.go:33: [servico] Parando...
+2026/05/11 10:56:31 service.go:21: [servico] Monitor encerrado.
+2026/05/11 10:56:31 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Regular                        -> DotMatrix-Regular.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Negrito (Bold)                 -> DotMatrix-Bold.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Italico (Italic)               -> DotMatrix-Italic.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Condensado (Condensed)         -> DotMatrix-CondensedRegular.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Expandido (Expanded)           -> DotMatrix-ExpandedRegular.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Negrito + Italico              -> DotMatrix-BoldItalic.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Condensado + Negrito           -> DotMatrix-CondensedBold.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Condensado + Italico           -> DotMatrix-CondensedItalic.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Expandido + Negrito            -> DotMatrix-ExpandedBold.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Expandido + Italico            -> DotMatrix-ExpandedItalic.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Expandido + Negrito + Italico  -> DotMatrix-ExpandedBoldItalic.ttf
+2026/05/11 10:56:31 main.go:76: [fonts] Condensado + Negrito + Italico -> DotMatrix-CondensedBoldItalic.ttf
+2026/05/11 10:56:31 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 10:56:31 service.go:19: [servico] Iniciando monitor...
+2026/05/11 10:56:31 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 10:56:31 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 10:56:31 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 10:58:42 service.go:33: [servico] Parando...
+2026/05/11 10:58:42 service.go:21: [servico] Monitor encerrado.
+2026/05/11 10:58:43 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Regular                        -> DotMatrix-Regular.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Negrito (Bold)                 -> DotMatrix-Bold.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Italico (Italic)               -> DotMatrix-Italic.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Condensado (Condensed)         -> DotMatrix-CondensedRegular.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Expandido (Expanded)           -> DotMatrix-ExpandedRegular.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Negrito + Italico              -> DotMatrix-BoldItalic.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Condensado + Negrito           -> DotMatrix-CondensedBold.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Condensado + Italico           -> DotMatrix-CondensedItalic.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Expandido + Negrito            -> DotMatrix-ExpandedBold.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Expandido + Italico            -> DotMatrix-ExpandedItalic.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Expandido + Negrito + Italico  -> DotMatrix-ExpandedBoldItalic.ttf
+2026/05/11 10:58:43 main.go:76: [fonts] Condensado + Negrito + Italico -> DotMatrix-CondensedBoldItalic.ttf
+2026/05/11 10:58:43 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 10:58:43 service.go:19: [servico] Iniciando monitor...
+2026/05/11 10:58:43 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 10:58:43 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 10:58:43 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 10:58:53 monitor.go:59: [monitor] Job #1 recebido
+2026/05/11 10:58:53 monitor.go:76: [job #1] 5018 bytes recebidos
+2026/05/11 10:58:53 processor.go:33: [job #1] Gerando PDF: C:\Users\wilso\Documents\EpsonFX80\20260511_105853_job0001.pdf
+2026/05/11 10:58:53 processor.go:44: [job #1] PDF gerado com 1 pagina(s)
+2026/05/11 11:09:30 service.go:33: [servico] Parando...
+2026/05/11 11:09:30 service.go:21: [servico] Monitor encerrado.
+2026/05/11 11:10:07 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 11:10:07 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 11:10:07 service.go:19: [servico] Iniciando monitor...
+2026/05/11 11:10:07 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 11:10:07 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 11:10:07 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 11:10:19 service.go:33: [servico] Parando...
+2026/05/11 11:10:19 service.go:21: [servico] Monitor encerrado.
+2026/05/11 11:10:26 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 11:10:26 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 11:10:26 service.go:19: [servico] Iniciando monitor...
+2026/05/11 11:10:26 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 11:10:26 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 11:10:26 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 11:11:39 service.go:33: [servico] Parando...
+2026/05/11 11:11:39 service.go:21: [servico] Monitor encerrado.
+2026/05/11 11:11:39 main.go:73: [fonts] Pasta de fontes: C:\dos\epson-fx80\installer\fonts\ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Regular                        -> DotMatrix-Regular.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Negrito (Bold)                 -> DotMatrix-Bold.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Italico (Italic)               -> DotMatrix-Italic.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Condensado (Condensed)         -> DotMatrix-CondensedRegular.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Expandido (Expanded)           -> DotMatrix-ExpandedRegular.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Negrito + Italico              -> DotMatrix-BoldItalic.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Condensado + Negrito           -> DotMatrix-CondensedBold.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Condensado + Italico           -> DotMatrix-CondensedItalic.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Expandido + Negrito            -> DotMatrix-ExpandedBold.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Expandido + Italico            -> DotMatrix-ExpandedItalic.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Expandido + Negrito + Italico  -> DotMatrix-ExpandedBoldItalic.ttf
+2026/05/11 11:11:39 main.go:76: [fonts] Condensado + Negrito + Italico -> DotMatrix-CondensedBoldItalic.ttf
+2026/05/11 11:11:39 main.go:79: [fonts] Pre-carga concluida
+2026/05/11 11:11:39 service.go:19: [servico] Iniciando monitor...
+2026/05/11 11:11:39 monitor.go:21: [monitor] Criando pipe: \\.\pipe\epson_fx80_emulator
+2026/05/11 11:11:39 service.go:28: [servico] Rodando, aguardando comandos do SCM...
+2026/05/11 11:11:39 monitor.go:37: [monitor] Aguardando jobs do spooler...
+2026/05/11 11:12:19 monitor.go:59: [monitor] Job #1 recebido
+2026/05/11 11:12:19 monitor.go:76: [job #1] 5018 bytes recebidos
+2026/05/11 11:12:19 processor.go:33: [job #1] Gerando PDF: C:\Users\wilso\Documents\EpsonFX80\20260511_111219_job0001.pdf
+2026/05/11 11:12:19 processor.go:44: [job #1] PDF gerado com 1 pagina(s)

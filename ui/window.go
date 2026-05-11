@@ -14,6 +14,8 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/epson-fx80-emulator/fontmgr"
+
 	"github.com/epson-fx80-emulator/storage"
 )
 
@@ -32,7 +34,7 @@ func newMainWindow(a fyne.App) fyne.Window {
 	return w
 }
 
-// buildContent monta o conteudo da janela com abas.
+// buildContent monta o conteudo da janela com abas e barra de versao no rodape.
 func buildContent(w fyne.Window, a fyne.App) fyne.CanvasObject {
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Historico", theme.DocumentIcon(), buildJobsTab(w)),
@@ -40,7 +42,18 @@ func buildContent(w fyne.Window, a fyne.App) fyne.CanvasObject {
 		container.NewTabItemWithIcon("Sobre", theme.InfoIcon(), buildAboutTab()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
-	return tabs
+
+	// Barra de versao no rodape -- visivel em todas as abas
+	versionBar := container.NewHBox(
+		widget.NewIcon(theme.InfoIcon()),
+		widget.NewLabelWithStyle(
+			"Epson FX-80 Emulator  "+Version+" - "+BuildStamp,
+			fyne.TextAlignLeading,
+			fyne.TextStyle{Monospace: true},
+		),
+	)
+
+	return container.NewBorder(nil, versionBar, nil, nil, tabs)
 }
 
 // ── Aba Historico ─────────────────────────────────────────────────────────────
@@ -267,8 +280,40 @@ func buildSettingsTab(w fyne.Window, a fyne.App) fyne.CanvasObject {
 		}
 	})
 
-	// -- Salvar ---------------------------------------------------------------
-	saveBtn := widget.NewButtonWithIcon("Salvar configuracoes", theme.DocumentSaveIcon(), func() {
+	// -- Secao de fontes TTF -------------------------------------------------------
+	exeDir := executableDir()
+	fontMgr := fontmgr.NewManager(exeDir)
+
+	// Cria um select por modo de impressao
+	type modeSelect struct {
+		mode fontmgr.Mode
+		sel  *widget.Select
+	}
+	var modeSelects []modeSelect
+
+	fontsGrid := container.NewVBox()
+	fontsGrid.Add(widget.NewLabel("Fonte por modo de impressao (requer reinicio do servico):"))
+
+	for _, mode := range fontmgr.AllModes {
+		m := mode // captura para closure
+		names := append([]string{"(padrao Courier)"}, fontMgr.AvailableFontNames(m)...)
+		sel := widget.NewSelect(names, nil)
+		sel.SetSelected(fontMgr.SelectedFontName(m))
+
+		row := container.NewGridWithColumns(2,
+			widget.NewLabel(fontmgr.ModeLabel(m)+":"),
+			sel,
+		)
+		fontsGrid.Add(row)
+		modeSelects = append(modeSelects, modeSelect{mode: m, sel: sel})
+	}
+
+	if !fontMgr.HasFontsDir() {
+		fontsGrid.Add(widget.NewLabel("Pasta fonts\\ttf\\ nao encontrada em: " + fontMgr.FontsDir))
+	}
+
+	// Atualiza saveBtn para incluir fontes
+	saveBtnFull := widget.NewButtonWithIcon("Salvar configuracoes", theme.DocumentSaveIcon(), func() {
 		paperType := paperSelect.SelectedIndex()
 		cols := 80
 		if colsSelect.Selected == "132 colunas" {
@@ -284,8 +329,16 @@ func buildSettingsTab(w fyne.Window, a fyne.App) fyne.CanvasObject {
 			dialog.ShowError(fmt.Errorf("Erro ao salvar:\n%v", err), w)
 			return
 		}
+		// Salva fontes
+		for _, ms := range modeSelects {
+			fontMgr.SetFontByName(ms.mode, ms.sel.Selected)
+		}
+		if err := fontMgr.Save(); err != nil {
+			dialog.ShowError(fmt.Errorf("Erro ao salvar fontes:\n%v", err), w)
+			return
+		}
 		dialog.ShowInformation("Configuracoes salvas",
-			"Configuracoes salvas com sucesso.\nO proximo job usara o novo papel.",
+			"Configuracoes salvas.\nReinicie o servico para aplicar as novas fontes.",
 			w)
 	})
 
@@ -304,11 +357,14 @@ func buildSettingsTab(w fyne.Window, a fyne.App) fyne.CanvasObject {
 		tractorCheck,
 		previewLabel,
 		widget.NewSeparator(),
+		widget.NewRichTextFromMarkdown("### Fontes TTF por modo de impressao"),
+		fontsGrid,
+		widget.NewSeparator(),
 		widget.NewRichTextFromMarkdown("### Servico Windows (EpsonFX80Monitor)"),
 		container.NewHBox(widget.NewLabel("Status:"), serviceStatus),
 		restartSvcBtn,
 		widget.NewSeparator(),
-		saveBtn,
+		saveBtnFull,
 	)
 
 	return container.NewPadded(container.NewVScroll(form))

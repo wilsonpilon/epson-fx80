@@ -14,7 +14,7 @@ import "fmt"
 
 // Version e a versao semantica do programa (ex: 0.1.3).
 // Injetada via: -ldflags "-X main.Version=0.1.3"
-var Version = "0.1.3"
+var Version = "0.1.5"
 
 // BuildStamp e o Unix timestamp da compilacao em hexadecimal (ex: 0x6820A4F2).
 // Injetada via: -ldflags "-X main.BuildStamp=0x6820A4F2"

@@ -192,7 +192,7 @@ Acessiveis pelo icone na bandeja do sistema > Abrir gerenciador > Configuracoes:
 
 As configuracoes sao salvas no registro do Windows e aplicadas a partir do proximo job.
 
-![Gerenciador de impressao -- aba Configuracoes](images/form-01.png)
+![Gerenciador de impressao -- aba Configuracoes](images/form-02.png)
 
 ---
 

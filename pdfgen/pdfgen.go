@@ -11,6 +11,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/epson-fx80-emulator/fontmgr"
 	"github.com/go-pdf/fpdf"
 )
 
@@ -18,9 +19,9 @@ import (
 type PaperType int
 
 const (
-	PaperWhite     PaperType = iota // Papel branco simples
-	PaperGreenZebra                 // Papel zebrado verde claro
-	PaperBlueZebra                  // Papel zebrado azul claro
+	PaperWhite      PaperType = iota // Papel branco simples
+	PaperGreenZebra                  // Papel zebrado verde claro
+	PaperBlueZebra                   // Papel zebrado azul claro
 )
 
 // Columns define a largura em colunas.
@@ -31,11 +32,12 @@ const (
 	Columns132 Columns = 132
 )
 
-// Options contem as configuracoes de papel.
+// Options contem as configuracoes de papel e fontes.
 type Options struct {
 	Paper       PaperType
 	Cols        Columns
-	TractorFeed bool // exibe faixa lateral com furos de trator
+	TractorFeed bool            // exibe faixa lateral com furos de trator
+	Fonts       fontmgr.FontMap // mapeamento modo -> arquivo TTF (nil = usar Courier)
 }
 
 // DefaultOptions retorna as opcoes padrao (papel branco, 80 col, sem trator).
@@ -44,6 +46,7 @@ func DefaultOptions() Options {
 		Paper:       PaperWhite,
 		Cols:        Columns80,
 		TractorFeed: false,
+		Fonts:       make(fontmgr.FontMap),
 	}
 }
 
@@ -54,11 +57,11 @@ const (
 	marginTop    = 12.0
 	marginBottom = 12.0
 
-	tractorW  = 12.0 // largura da faixa de trator em mm
-	tractorHoleR = 2.5 // raio dos furos em mm
+	tractorW     = 12.0 // largura da faixa de trator em mm
+	tractorHoleR = 2.5  // raio dos furos em mm
 	holeSpacing  = 12.7 // espacamento entre furos (0.5 pol = espacamento real)
 
-	fontFamily = "Courier" // Courier = fonte monoespaco, identica a matricial
+	defaultFont = "Courier" // fallback quando nenhuma TTF estiver configurada
 )
 
 // Generate cria um PDF em pdfPath a partir de text com as opcoes dadas.
@@ -66,6 +69,9 @@ const (
 func Generate(pdfPath, text string, opts Options) (int, error) {
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetAutoPageBreak(false, 0) // controlamos manualmente
+
+	// Registra fontes TTF configuradas e determina a familia a usar
+	fontFamily := registerFonts(pdf, opts.Fonts)
 
 	// Calcula margens baseado em colunas e presenca de trator
 	marginLeft, marginRight, fontSize, lineH := calcLayout(opts)
@@ -141,6 +147,40 @@ func Generate(pdfPath, text string, opts Options) (int, error) {
 	return pageCount, nil
 }
 
+// registerFonts registra as fontes TTF no fpdf e retorna o nome da familia a usar.
+// Se nenhuma fonte TTF estiver configurada, retorna "Courier" (built-in).
+// A familia registrada usa o nome "EpsonTTF" e mapeia cada estilo para o TTF correto.
+func registerFonts(pdf *fpdf.Fpdf, fonts fontmgr.FontMap) string {
+	if len(fonts) == 0 {
+		return defaultFont
+	}
+
+	// Verifica se ha pelo menos a fonte Regular configurada
+	regularPath, hasRegular := fonts[fontmgr.ModeRegular]
+	if !hasRegular || regularPath == "" {
+		return defaultFont
+	}
+
+	const familyName = "EpsonTTF"
+
+	// Registra Regular (obrigatorio)
+	pdf.AddUTF8Font(familyName, "", regularPath)
+
+	// Registra estilos opcionais se configurados
+	styleMap := map[fontmgr.Mode]string{
+		fontmgr.ModeBold:       "B",
+		fontmgr.ModeItalic:     "I",
+		fontmgr.ModeBoldItalic: "BI",
+	}
+	for mode, style := range styleMap {
+		if path, ok := fonts[mode]; ok && path != "" {
+			pdf.AddUTF8Font(familyName, style, path)
+		}
+	}
+
+	return familyName
+}
+
 // calcLayout retorna margem esquerda, direita, tamanho de fonte e altura de linha
 // com base nas opcoes de papel.
 func calcLayout(opts Options) (mL, mR, fSize, lineH float64) {
@@ -191,7 +231,7 @@ func drawPageDecorations(pdf *fpdf.Fpdf, opts Options, lineH float64) {
 
 	// Faixas de trator
 	if opts.TractorFeed {
-		drawTractorStrip(pdf, 0, lineH)           // esquerda
+		drawTractorStrip(pdf, 0, lineH)              // esquerda
 		drawTractorStrip(pdf, pageW-tractorW, lineH) // direita
 	}
 }

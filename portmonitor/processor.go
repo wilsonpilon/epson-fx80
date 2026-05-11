@@ -33,6 +33,10 @@ func processJob(jobID int, baseName string, data []byte) error {
 	log.Printf("[job #%d] Gerando PDF: %s", jobID, pdfPath)
 
 	opts := pdfgen.LoadOptions()
+	// Injeta o mapa de fontes pre-carregado na inicializacao do servico
+	if fontManager != nil {
+		opts.Fonts = fontManager.Map
+	}
 	pages, err := pdfgen.Generate(pdfPath, text, opts)
 	if err != nil {
 		return fmt.Errorf("erro ao gerar PDF: %w", err)

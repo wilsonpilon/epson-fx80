@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/epson-fx80-emulator/fontmgr"
 	"golang.org/x/sys/windows/svc"
 )
 
@@ -20,11 +21,16 @@ const (
 	PipeName    = `\\.\pipe\epson_fx80_emulator`
 )
 
+// fontManager e o gerenciador de fontes pre-carregado na inicializacao.
+// Usado pelo processor para saber quais TTFs aplicar em cada job.
+var fontManager *fontmgr.Manager
+
 func main() {
 	debug := flag.Bool("debug", false, "Roda no terminal em vez de como servico Windows")
 	flag.Parse()
 
 	setupLog()
+	preloadFonts()
 
 	if *debug {
 		log.Println("Modo debug: rodando no terminal. Ctrl+C para encerrar.")
@@ -46,6 +52,31 @@ func main() {
 		fmt.Println("  -debug   : roda no terminal")
 		fmt.Println("  sc start : inicia como servico Windows")
 	}
+}
+
+// preloadFonts inicializa o fontManager e loga as fontes encontradas.
+func preloadFonts() {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Println("[fonts] Nao foi possivel determinar o diretorio do executavel")
+		return
+	}
+	exeDir := filepath.Dir(exe)
+	fontManager = fontmgr.NewManager(exeDir)
+
+	if !fontManager.HasFontsDir() {
+		log.Printf("[fonts] Pasta de fontes nao encontrada: %s", fontManager.FontsDir)
+		log.Println("[fonts] Usando fonte padrao Courier para todos os modos")
+		return
+	}
+
+	log.Printf("[fonts] Pasta de fontes: %s", fontManager.FontsDir)
+	for _, mode := range fontmgr.AllModes {
+		if path := fontManager.SelectedFont(mode); path != "" {
+			log.Printf("[fonts] %-30s -> %s", fontmgr.ModeLabel(mode), filepath.Base(path))
+		}
+	}
+	log.Println("[fonts] Pre-carga concluida")
 }
 
 func setupLog() {

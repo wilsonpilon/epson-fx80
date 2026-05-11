@@ -91,7 +91,7 @@ New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 # Calcula build stamp: Unix timestamp em hexadecimal (ex: 0x6820A4F2)
 $BuildUnix  = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $BuildHex   = "0x{0:X}" -f $BuildUnix
-$Version    = "0.1.3"
+$Version    = "0.1.5"
 $LDVersion  = "-X main.Version=$Version -X main.BuildStamp=$BuildHex"
 
 Write-Host ""
@@ -110,9 +110,10 @@ function Build($pkg, $out, $ldflags) {
     Write-Step "Compilando $out..."
     $outPath = Join-Path $OutDir $out
     if ($ldflags) {
-        $result = go build -ldflags $ldflags -o $outPath "./$pkg" 2>&1
+        # Usa array de argumentos para evitar problema de escaping de aspas no PowerShell
+        $result = & go build -ldflags $ldflags -o $outPath "./$pkg" 2>&1
     } else {
-        $result = go build -o $outPath "./$pkg" 2>&1
+        $result = & go build -o $outPath "./$pkg" 2>&1
     }
     if ($LASTEXITCODE -ne 0) {
         Write-Host " [ERRO]" -ForegroundColor Red
@@ -129,7 +130,9 @@ Write-OK
 
 Build "portmonitor" "portmonitor.exe" ""
 Build "installer"   "installer.exe"   ""
-Build "ui"          "ui.exe"          "`"$LDVersion -H windowsgui`""
+# ldflags da UI: versao + build stamp + sem janela de terminal
+$UILDFlags = "$LDVersion -H windowsgui"
+Build "ui" "ui.exe" $UILDFlags
 
 Write-Host ""
 Write-Host "----------------------------------------------------"

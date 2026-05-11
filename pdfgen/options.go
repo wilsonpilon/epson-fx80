@@ -1,28 +1,28 @@
 // pdfgen/options.go
-// Le e salva as opcoes de papel no registro do Windows.
-// Chave: HKLM\SOFTWARE\EpsonFX80Emulator
-//   PaperType    REG_DWORD  0=branco 1=verde 2=azul
-//   TractorFeed  REG_DWORD  0=nao 1=sim
-//   Columns      REG_DWORD  80 ou 132
+// Le as opcoes de papel e fontes do registro do Windows.
 
 package pdfgen
 
 import (
+	"os"
+	"path/filepath"
+
+	"github.com/epson-fx80-emulator/fontmgr"
 	"golang.org/x/sys/windows/registry"
 )
 
 const regKey = `SOFTWARE\EpsonFX80Emulator`
 
-// LoadOptions le as opcoes de papel do registro do Windows.
+// LoadOptions le as opcoes de papel e fontes do registro do Windows.
 // Retorna DefaultOptions() se a chave nao existir.
 func LoadOptions() Options {
+	opts := DefaultOptions()
+
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
-		return DefaultOptions()
+		return opts
 	}
 	defer k.Close()
-
-	opts := DefaultOptions()
 
 	if v, _, err := k.GetIntegerValue("PaperType"); err == nil {
 		opts.Paper = PaperType(v)
@@ -37,5 +37,20 @@ func LoadOptions() Options {
 			opts.Cols = Columns80
 		}
 	}
+
+	// Carrega mapeamento de fontes usando o fontmgr
+	execDir := executableDir()
+	mgr := fontmgr.NewManager(execDir)
+	opts.Fonts = mgr.Map
+
 	return opts
+}
+
+// executableDir retorna o diretorio do executavel atual.
+func executableDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	return filepath.Dir(exe)
 }
